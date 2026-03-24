@@ -4,6 +4,7 @@ TypeScript CLI decoder for BMW TIS `.ITW` proprietary image files. Converts prop
 
 [![CI](https://github.com/emdzej/itw-decoder/actions/workflows/ci.yml/badge.svg)](https://github.com/emdzej/itw-decoder/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@emdzej/itw-decoder)](https://www.npmjs.com/package/@emdzej/itw-decoder)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 
 ## What is ITW?
 
@@ -123,4 +124,4 @@ pnpm dev          # run via ts-node (no build step)
 
 ## License
 
-Private research / reverse-engineering project.
+[PolyForm Noncommercial License 1.0.0](LICENSE) — free for personal, research, and noncommercial use; commercial use is not permitted.
