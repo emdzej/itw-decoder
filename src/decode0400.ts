@@ -19,7 +19,7 @@
  *   FUN_004b5d20 — expand: literal copy then RLE with powers table
  */
 
-import { DecodeResult, ITWError, readBE32From2BE16 } from "./itw";
+import { DecodeResult, ITWError, toBuffer } from "./itw";
 
 // ─── Data structures ────────────────────────────────────────────────
 // ByteStack mirrors FUN_004b67d0 / FUN_004b6890:
@@ -58,12 +58,13 @@ interface HuffNode {
 }
 
 // ─── FUN_004b5a40: Read payload tables from buffer ──────────────────
-function readTables(buf: Uint8Array, off: number): {
+function readTables(input: Uint8Array, off: number): {
   intArr: IntStack;     // DAT_00580020 (int-array): first element = N, then N byte values
   tableB: ByteStack;    // DAT_00580014 (byte-array): len1 bytes
   tableC: ByteStack;    // DAT_0058001c (byte-array): len2 bytes
   n: number;            // DAT_00580018
 } {
+  const buf = toBuffer(input);
   const intArr = new IntStack();  // DAT_00580020
   const tableB = new ByteStack(); // DAT_00580014
   const tableC = new ByteStack(); // DAT_0058001c
@@ -85,7 +86,7 @@ function readTables(buf: Uint8Array, off: number): {
 
   // len1 = FUN_004b5750(param_1) → BE32 via two BE16
   if (p + 4 > buf.length) throw new ITWError("missing len1");
-  const len1 = readBE32From2BE16(buf, p);
+  const len1 = buf.readUInt32BE(p);
   p += 4;
   if (p + len1 > buf.length) throw new ITWError("payload length exceeds file size at table B");
   for (let i = 0; i < len1; i++) {
@@ -94,7 +95,7 @@ function readTables(buf: Uint8Array, off: number): {
 
   // len2 = FUN_004b5750(param_1) → BE32 via two BE16
   if (p + 4 > buf.length) throw new ITWError("missing len2");
-  const len2 = readBE32From2BE16(buf, p);
+  const len2 = buf.readUInt32BE(p);
   p += 4;
   if (p + len2 > buf.length) throw new ITWError("payload length exceeds file size at table C");
   for (let i = 0; i < len2; i++) {

@@ -1,41 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { parseHeader, readBE16, readBE32From2BE16, readLE32, ITWError } from '../src/itw';
+import { parseHeader, toBuffer, ITWError } from '../src/itw';
 
-describe('readBE16', () => {
-  it('reads big-endian 16-bit value', () => {
-    expect(readBE16(new Uint8Array([0x12, 0x34]), 0)).toBe(0x1234);
+describe('toBuffer', () => {
+  it('returns same Buffer if already a Buffer', () => {
+    const buf = Buffer.from([1, 2, 3]);
+    expect(toBuffer(buf)).toBe(buf);
   });
 
-  it('reads at offset', () => {
-    expect(readBE16(new Uint8Array([0x00, 0xAB, 0xCD]), 1)).toBe(0xABCD);
+  it('wraps Uint8Array as Buffer', () => {
+    const arr = new Uint8Array([0xAB, 0xCD]);
+    const buf = toBuffer(arr);
+    expect(Buffer.isBuffer(buf)).toBe(true);
+    expect(buf.readUInt16BE(0)).toBe(0xABCD);
   });
 
-  it('throws on out-of-range', () => {
-    expect(() => readBE16(new Uint8Array([0x00]), 0)).toThrow(ITWError);
-  });
-});
-
-describe('readBE32From2BE16', () => {
-  it('reads BE32 from two consecutive BE16 values', () => {
-    const buf = new Uint8Array([0x00, 0x01, 0x00, 0x02]);
-    expect(readBE32From2BE16(buf, 0)).toBe(0x00010002);
-  });
-
-  it('handles large values', () => {
-    const buf = new Uint8Array([0xFF, 0xFF, 0xFF, 0xFF]);
-    // (0xFFFF << 16) | 0xFFFF = -1 in signed 32-bit
-    expect(readBE32From2BE16(buf, 0)).toBe(-1);
-  });
-});
-
-describe('readLE32', () => {
-  it('reads little-endian 32-bit value', () => {
-    const buf = new Uint8Array([0x78, 0x56, 0x34, 0x12]);
-    expect(readLE32(buf, 0)).toBe(0x12345678);
-  });
-
-  it('throws on out-of-range', () => {
-    expect(() => readLE32(new Uint8Array([0, 0, 0]), 0)).toThrow(ITWError);
+  it('handles Uint8Array with offset', () => {
+    const backing = new ArrayBuffer(8);
+    new Uint8Array(backing)[4] = 0x42;
+    const slice = new Uint8Array(backing, 4, 1);
+    const buf = toBuffer(slice);
+    expect(buf[0]).toBe(0x42);
+    expect(buf.length).toBe(1);
   });
 });
 

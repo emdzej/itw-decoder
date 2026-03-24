@@ -7,7 +7,7 @@
  */
 
 import { inflateSync } from "zlib";
-import { DecodeResult, ITWError, readBE16, readBE32From2BE16 } from "./itw";
+import { DecodeResult, ITWError, toBuffer } from "./itw";
 
 // ─── Global constants (from Ghidra data section) ────────────────────────────
 const DAT_004ed190 = 0.5;       // double: center = (range + min) * 0.5
@@ -23,18 +23,24 @@ const DAT_004ed11c = 5;         // int:    buffer size multiplier
 // ─── Cursor: tracks read position into the payload ─────────────────────────
 class Cursor {
   pos: number;
-  constructor(private buf: Uint8Array, offset: number) { this.pos = offset; }
+  private buf: Buffer;
+  constructor(input: Uint8Array, offset: number) {
+    this.buf = toBuffer(input);
+    this.pos = offset;
+  }
   readByte(): number {
     if (this.pos >= this.buf.length) throw new ITWError("cursor overrun");
     return this.buf[this.pos++];
   }
   readBE16(): number {
-    const v = readBE16(this.buf, this.pos);
+    if (this.pos + 2 > this.buf.length) throw new ITWError("cursor overrun (BE16)");
+    const v = this.buf.readUInt16BE(this.pos);
     this.pos += 2;
     return v;
   }
   readBE32(): number {
-    const v = readBE32From2BE16(this.buf, this.pos);
+    if (this.pos + 4 > this.buf.length) throw new ITWError("cursor overrun (BE32)");
+    const v = this.buf.readUInt32BE(this.pos);
     this.pos += 4;
     return v;
   }
@@ -1328,7 +1334,8 @@ function readLLBand(cursor: Cursor, matrix: Matrix): void {
 export function decode0300(buf: Uint8Array, payloadOffset: number, width: number, height: number, opts?: { zeroDetailBands?: boolean; bandMask?: number; returnFloat?: boolean; detailGain?: number; g1Scale?: number }): DecodeResult & { floatData?: Float32Array } {
   // Read BE32 payload length, then the payload starts after it
   if (payloadOffset + 4 > buf.length) throw new ITWError("missing wavelet length");
-  const payloadLen = readBE32From2BE16(buf, payloadOffset);
+  const b = toBuffer(buf);
+  const payloadLen = b.readUInt32BE(payloadOffset);
   const payloadStart = payloadOffset + 4;
   if (payloadStart + payloadLen > buf.length) throw new ITWError("wavelet payload overruns file");
   
