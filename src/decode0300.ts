@@ -295,8 +295,9 @@ function deriveMirror(coeffs: number[], center: number): number[] {
     result[i] = coeffs[i] * sign;
     sign = -sign;
   }
-  // Second loop: center+1 up to len-1, sign restarts at +1
-  sign = 1;
+  // Second loop: center+1 up to len-1, sign starts at -1
+  // (Ghidra's loop restarts at center with +1, flips to -1, then writes center+1 with -1)
+  sign = -1;
   for (let i = center + 1; i < len; i++) {
     result[i] = coeffs[i] * sign;
     sign = -sign;
@@ -330,17 +331,21 @@ function initFilters(filterType: number): {
   const analysisLowCenter = Math.floor(analysisLowLen / 2);
   const analysisHighCenter = Math.floor(analysisHighLen / 2);
   const synthHighCoeffs = deriveMirror(analysisLowCoeffs, analysisLowCenter);
-  // synthLow not needed for reconstruction (but computed in the original for completeness)
-  // const synthLowCoeffs = deriveMirror(analysisHighCoeffs, analysisHighCenter);
+  const synthLowCoeffs = deriveMirror(analysisHighCoeffs, analysisHighCenter);
   
-  // Reconstruction uses: puVar6 (analysis high) and puVar7 (synthesis high)
+  // Reconstruction uses: puVar6 (analysis high, parity 0) and puVar7 (synthesis high, parity 1)
   // wavelet_reconstruct_all(puVar6, puVar7, pyramid, image)
   //   where puVar6 = filter_alloc(NULL, analysisHighLen, 0)  → analysis high
   //         puVar7 = filter_alloc(NULL, analysisLowLen, 1)   → synthesis high
   const analysisHigh = makeFilter(analysisHighCoeffs, analysisHighLen, 0);
   const synthHigh = makeFilter(synthHighCoeffs, analysisLowLen, 1);
+  const synthLow = makeFilter(synthLowCoeffs, analysisHighLen, -1);
   
+  // EXPERIMENT: try synthLow (g0) instead of analysisHigh (h1) as filter1
+  // Standard biorthogonal reconstruction uses g0 and g1 (both synthesis filters)
+  // TIS.exe appears to use h1 and g1 — but maybe the polyphase structure compensates?
   return { reconstructFilter1: analysisHigh, reconstructFilter2: synthHigh };
+  // Alternative: return { reconstructFilter1: synthLow, reconstructFilter2: synthHigh };
 }
 
 // ─── Fischer rank coding tables ─────────────────────────────────────────────
@@ -1312,7 +1317,7 @@ function readLLBand(cursor: Cursor, matrix: Matrix): void {
 // For 4 levels, all 11 are used.
 
 // ─── Main decode function ──────────────────────────────────────────────────
-export function decode0300(buf: Uint8Array, payloadOffset: number, width: number, height: number, opts?: { zeroDetailBands?: boolean; bandMask?: number }): DecodeResult {
+export function decode0300(buf: Uint8Array, payloadOffset: number, width: number, height: number, opts?: { zeroDetailBands?: boolean; bandMask?: number; returnFloat?: boolean; detailGain?: number; g1Scale?: number }): DecodeResult & { floatData?: Float32Array } {
   // Read BE32 payload length, then the payload starts after it
   if (payloadOffset + 4 > buf.length) throw new ITWError("missing wavelet length");
   const payloadLen = readBE32From2BE16(buf, payloadOffset);
@@ -1342,6 +1347,12 @@ export function decode0300(buf: Uint8Array, payloadOffset: number, width: number
   
   // Initialize wavelet filters (synthesis only needed for reconstruction)
   const { reconstructFilter1, reconstructFilter2 } = initFilters(filterType);
+  
+  // Debug: scale g1 (reconstructFilter2) coefficients by an override factor
+  if (opts?.g1Scale !== undefined && opts.g1Scale !== 1.0) {
+    const s = opts.g1Scale;
+    reconstructFilter2.coeffs = reconstructFilter2.coeffs.map(c => c * s);
+  }
   
   // Create wavelet pyramid
   const pyramid = pyramidCreate(width, height, numLevels);
@@ -1429,6 +1440,14 @@ export function decode0300(buf: Uint8Array, payloadOffset: number, width: number
         }
       }
     }
+    // Debug: scale all detail bands by a gain factor
+    if (opts?.detailGain !== undefined && opts.detailGain !== 1.0) {
+      const g = opts.detailGain;
+      for (let i = 0; i < detailSubbands; i++) {
+        const d = views[i].data;
+        for (let j = 0; j < d.length; j++) d[j] *= g;
+      }
+    }
     
     // Read LL band (raw bytes)
     readLLBand(cursor, llBandMatrix);
@@ -1493,5 +1512,8 @@ export function decode0300(buf: Uint8Array, payloadOffset: number, width: number
     }
   }
   
+  if (opts?.returnFloat) {
+    return { width, height, pixels, floatData: result.data };
+  }
   return { width, height, pixels };
 }
