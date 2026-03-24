@@ -1,6 +1,9 @@
-# itw-decoder
+# @emdzej/itw-decoder
 
-TypeScript CLI decoder for BMW TIS ITW image files. Converts proprietary ITW images to standard PNG format.
+TypeScript CLI decoder for BMW TIS `.ITW` proprietary image files. Converts proprietary ITW images to standard PNG format.
+
+[![CI](https://github.com/emdzej/itw-decoder/actions/workflows/ci.yml/badge.svg)](https://github.com/emdzej/itw-decoder/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@emdzej/itw-decoder)](https://www.npmjs.com/package/@emdzej/itw-decoder)
 
 ## What is ITW?
 
@@ -11,7 +14,17 @@ ITW is a proprietary image format used in BMW's Technical Information System (TI
 
 All images are 8-bit grayscale, typically 316×238 pixels.
 
+For a full technical description of the format and decoding algorithms see [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md).
+
 ## Installation
+
+### Global (recommended for CLI use)
+
+```bash
+npm install -g @emdzej/itw-decoder
+```
+
+### Local / development
 
 ```bash
 pnpm install
@@ -19,55 +32,94 @@ pnpm install
 
 ## Usage
 
-```bash
-# Decode a single file (output defaults to <input>.png)
-pnpm run decode samples/10/00/32.ITW
+```
+Usage: itw-decode [options] <input>
 
-# Decode with explicit output path
-pnpm run decode samples/1/03/95/26.ITW -o out.png
+Decode BMW TIS .ITW proprietary image files to PNG
+
+Arguments:
+  input                  path to the .ITW file to decode
+
+Options:
+  -V, --version          output the current version
+  -o, --output <file>    output PNG path (default: <input>.png in cwd)
+  -d, --dir <directory>  output directory, keeps auto-derived filename (default: cwd)
+  -h, --help             display help for command
+```
+
+### Examples
+
+```bash
+# Decode — output defaults to ./26.png
+itw-decode samples/1/03/95/26.ITW
+
+# Explicit output path
+itw-decode samples/1/03/95/26.ITW -o out/diagram.png
+
+# Write to a directory, keep original filename
+itw-decode samples/1/03/95/26.ITW -d out/
+```
+
+> **Note:** `-o` and `-d` are independent; `-o` takes full precedence when both are supplied.
+
+### Dev (without global install)
+
+```bash
+./node_modules/.bin/ts-node src/index.ts samples/1/03/95/26.ITW -o output.png
 ```
 
 ## Bulk testing
 
-To test against the full GRAFIK corpus:
+To test against a full GRAFIK corpus directory:
 
 ```bash
-# Test first 100 files
+# First 100 files
 ./node_modules/.bin/ts-node bulk_test.ts /path/to/GRAFIK --limit 100
 
-# Test all files
+# All files
 ./node_modules/.bin/ts-node bulk_test.ts /path/to/GRAFIK
 ```
+
+## Test results
+
+Tested against the full 47,660-file GRAFIK corpus:
+
+| Metric | Value |
+|--------|-------|
+| Success rate | **98.67%** (47,028 / 47,660) |
+| 0x0300 wavelet decoded | 35,117 |
+| 0x0400 entropy decoded | 11,911 |
+| Failures | 632 — all genuinely malformed/truncated source files |
+
+The dominant failure reason is "wavelet payload overruns file" (470 truncated files), not decoder bugs.
 
 ## Project structure
 
 ```
 src/
-  itw.ts          — Header parsing, shared types, endian helpers
-  decode0300.ts   — Wavelet codec decoder (biorthogonal wavelet transform)
-  decode0400.ts   — Entropy codec decoder (Huffman + RLE)
+  itw.ts          — Header parsing, shared types (ITWHeader, DecodeResult, ITWError), endian helpers
+  decode0300.ts   — Wavelet codec (biorthogonal wavelet transform, ~1518 lines)
+  decode0400.ts   — Entropy codec (Huffman + RLE interleave)
   png.ts          — Grayscale→RGBA conversion, PNG writer (pngjs)
-  index.ts        — CLI entry point
+  index.ts        — CLI entry point (commander.js)
 docs/
-  findings.md     — Detailed reverse-engineering documentation
-bulk_test.ts      — Corpus-wide bulk decoder test
+  HOW_IT_WORKS.md — Complete decoder specification (format to reimplement in any language)
+  findings.md     — Raw reverse-engineering notes, Ghidra function table, lessons learned
 ```
 
-## Format documentation
+## Documentation
 
-See [`docs/findings.md`](docs/findings.md) for comprehensive reverse-engineering notes including:
-- Header layout and field descriptions
-- Wavelet codec internals (filter coefficients, pyramid structure, bitstream format)
-- Entropy codec internals (Huffman tables, interleave scheme)
-- All key function addresses from `tis.exe`
-- Critical implementation lessons learned
+| Document | Description |
+|----------|-------------|
+| [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md) | Complete, language-agnostic decoder specification — header layout, both codecs, filter derivation, Fischer coding, polyphase convolution, all constants |
+| [`docs/findings.md`](docs/findings.md) | Reverse-engineering notes — Ghidra function addresses, all 9 bugs found and fixed, x87 FPU pitfalls |
 
-## Test results
+## Building
 
-- **98.67% success rate** across the full 47,660-file GRAFIK corpus (47,028 OK / 632 FAIL)
-- 35,117 wavelet files and 11,911 entropy files decoded successfully
-- All 632 failures are genuinely malformed/truncated source files (not decoder bugs)
-- Dominant failure: "wavelet payload overruns file" (470 truncated files)
+```bash
+pnpm build        # tsc → dist/
+pnpm dev          # run via ts-node (no build step)
+```
 
 ## License
 

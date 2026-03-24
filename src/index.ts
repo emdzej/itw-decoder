@@ -1,43 +1,48 @@
 #!/usr/bin/env node
 import { readFileSync } from "fs";
-import { basename, resolve } from "path";
+import { basename, resolve, join } from "path";
+import { Command } from "commander";
 import { ITWError, parseHeader } from "./itw";
 import { decode0400 } from "./decode0400";
 import { decode0300 } from "./decode0300";
 import { writePng } from "./png";
 
-function usage(): never {
-  console.error("Usage: itw-decode <input.itw> [-o output.png]");
-  process.exit(1);
-}
+import { createRequire } from "module";
+// resolve package.json relative to this file at runtime (works for both ts-node and compiled dist/)
+const _require = createRequire(__filename);
+const { version } = _require("../package.json") as { version: string };
 
-async function main() {
-  const args = process.argv.slice(2);
-  if (args.length < 1) usage();
-  const input = resolve(args[0]);
-  let output: string | undefined;
-  for (let i = 1; i < args.length; i++) {
-    if (args[i] === "-o" && i + 1 < args.length) {
-      output = resolve(args[i + 1]);
-      i++;
+const program = new Command();
+
+program
+  .name("itw-decode")
+  .description("Decode BMW TIS .ITW proprietary image files to PNG")
+  .version(version, "-V, --version", "output the current version")
+  .argument("<input>", "path to the .ITW file to decode")
+  .option("-o, --output <file>", "output PNG path (default: <input>.png)")
+  .option("-d, --dir <directory>", "output directory (default: current working directory)")
+  .action(async (input: string, options: { output?: string; dir?: string }) => {
+    const inputPath = resolve(input);
+    const defaultName = basename(inputPath).replace(/\.itw$/i, "") + ".png";
+    const outputPath = options.output
+      ? resolve(options.output)
+      : join(resolve(options.dir ?? process.cwd()), defaultName);
+
+    const buf = readFileSync(inputPath);
+    const { header, payloadOffset } = parseHeader(buf);
+
+    let result;
+    if (header.subtype === 0x0300) {
+      result = decode0300(buf, payloadOffset, header.width, header.height);
+    } else {
+      result = decode0400(buf, payloadOffset, header.width, header.height);
     }
-  }
 
-  const buf = readFileSync(input);
-  const { header, payloadOffset } = parseHeader(buf);
-  let result;
-  if (header.subtype === 0x0300) {
-    result = decode0300(buf, payloadOffset, header.width, header.height);
-  } else {
-    result = decode0400(buf, payloadOffset, header.width, header.height);
-  }
+    await writePng(outputPath, result.pixels, result.width, result.height);
+    console.error(`wrote ${outputPath} (${result.width}x${result.height})`);
+  });
 
-  const outPath = output ?? resolve(process.cwd(), `${basename(input).replace(/\.itw$/i, "")}.png`);
-  await writePng(outPath, result.pixels, result.width, result.height);
-  console.error(`wrote ${outPath} (${result.width}x${result.height})`);
-}
-
-main().catch((err) => {
+program.parseAsync(process.argv).catch((err: unknown) => {
   if (err instanceof ITWError) {
     console.error(`error: ${err.message}`);
   } else {
