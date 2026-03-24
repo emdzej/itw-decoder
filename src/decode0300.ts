@@ -1525,3 +1525,27 @@ export function decode0300(buf: Uint8Array, payloadOffset: number, width: number
   }
   return { width, height, pixels };
 }
+
+/** @internal — exported for testing only */
+export const _internals = {
+  deriveMirror,
+  buildFilterCoeffs,
+  initFilters,
+  buildBaseTable,
+  buildDiffTable,
+  buildRankTable,
+  tableLookup,
+  fischerDecode,
+  splitEvenOdd,
+  calcBandSize,
+  levelScaleFactor,
+  q15ToFloat,
+  hexToFloat,
+  polyphaseConvolve1D,
+  matrixCreate,
+  matrixGet,
+  matrixSet,
+  edgeExtend,
+  Cursor,
+  Bitstream,
+};
