@@ -1,3 +1,11 @@
+/**
+ * Copyright (c) 2026 Michał Jaskólski
+ *
+ * This source code is licensed under the PolyForm Noncommercial License 1.0.0
+ * found in the LICENSE file in the root directory of this repository.
+ * https://polyformproject.org/licenses/noncommercial/1.0.0
+ */
+
 export type ITWSubtype = 0x0300 | 0x0400;
 
 export interface ITWHeader {
