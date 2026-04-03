@@ -4,6 +4,10 @@
   "type": "commonjs",
   "description": "Decode BMW TIS .ITW proprietary image files to PNG",
   "license": "PolyForm-Noncommercial-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/emdzej/itw-decoder"
+  },
   "main": "dist/index.js",
   "bin": {
     "itw-decode": "dist/index.js"
