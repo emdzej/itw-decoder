@@ -81,21 +81,6 @@ To test against a full GRAFIK corpus directory:
 ./node_modules/.bin/ts-node bulk_test.ts /path/to/GRAFIK
 ```
 
-## Test results
-
-Tested against the full 47,660-file GRAFIK corpus:
-
-| Metric | Value |
-|--------|-------|
-| Success rate | **99.66%** (47,498 / 47,660) |
-| 0x0300 wavelet decoded | 35,587 |
-| 0x0400 entropy decoded | 11,911 |
-| Failures | 162 — all genuinely malformed/truncated source files |
-
-### Encoder bug: 256-byte payload length overrun
-
-586 wavelet (0x0300) files in the corpus declare a payload length exactly 256 bytes larger than the actual file data. This is a systematic bug in the original BMW ITW encoder — the payload data is complete, only the length field is wrong. The decoder tolerates this by allowing small overruns (up to 512 bytes) while still rejecting truly truncated files.
-
 ## Project structure
 
 ```
