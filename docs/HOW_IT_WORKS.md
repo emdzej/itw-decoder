@@ -77,7 +77,7 @@ Each table (B and C) contains an embedded Huffman tree followed by a bitstream.
 
 **Build Huffman tree** (priority-queue merge):
 1. Create leaf nodes with their float weights
-2. Repeatedly extract the two lowest-weight nodes, create a parent with weight = sum of children
+2. Repeatedly extract the two lowest-weight nodes, create a parent with weight = **float32** sum of children (see [Float32 Precision](#float32-precision))
 3. Root = last remaining node
 
 **Decode bitstream:**
@@ -612,7 +612,21 @@ function readBits(n):
 
 ## Float32 Precision
 
-The original TIS.exe uses x87 FPU instructions with float32 (single precision) storage for most intermediate wavelet computations. For bit-exact matching, intermediate results in the coefficient reconstruction should be truncated to float32 at each step:
+The original TIS.exe uses float32 (single precision) storage throughout. This affects **both** codecs.
+
+### 0x0400 Entropy Codec — Huffman Tree Weights
+
+Leaf weights are stored as float32 in the file. When merging nodes during tree construction, the parent weight **must** be computed in float32:
+
+```
+parentWeight = float32(left.weight + right.weight)
+```
+
+Using float64 for the sum can produce a value that sorts differently relative to leaf weights, swapping children in the priority queue and producing a completely wrong tree. This is not a rare edge case — it affects real files in the BMW TIS corpus.
+
+### 0x0300 Wavelet Codec — Coefficient Reconstruction
+
+The original TIS.exe uses x87 FPU instructions with float32 storage for most intermediate wavelet computations. For bit-exact matching, intermediate results in the coefficient reconstruction should be truncated to float32 at each step:
 
 ```
 fVar8 = float32(float32(bandScale / bandValue) * bandOffset)
