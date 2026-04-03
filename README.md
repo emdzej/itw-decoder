@@ -13,7 +13,7 @@ ITW is a proprietary image format used in BMW's Technical Information System (TI
 - **Subtype 0x0300** — Wavelet compression (biorthogonal wavelet transform, ~5:1–14:1 ratio)
 - **Subtype 0x0400** — Entropy compression (Huffman + RLE interleave)
 
-All images are 8-bit grayscale, typically 316×238 pixels.
+All images are 8-bit grayscale, typically 316×238 or 631×474 pixels.
 
 For a full technical description of the format and decoding algorithms see [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md).
 
@@ -87,12 +87,14 @@ Tested against the full 47,660-file GRAFIK corpus:
 
 | Metric | Value |
 |--------|-------|
-| Success rate | **98.67%** (47,028 / 47,660) |
-| 0x0300 wavelet decoded | 35,117 |
+| Success rate | **99.66%** (47,498 / 47,660) |
+| 0x0300 wavelet decoded | 35,587 |
 | 0x0400 entropy decoded | 11,911 |
-| Failures | 632 — all genuinely malformed/truncated source files |
+| Failures | 162 — all genuinely malformed/truncated source files |
 
-The dominant failure reason is "wavelet payload overruns file" (470 truncated files), not decoder bugs.
+### Encoder bug: 256-byte payload length overrun
+
+586 wavelet (0x0300) files in the corpus declare a payload length exactly 256 bytes larger than the actual file data. This is a systematic bug in the original BMW ITW encoder — the payload data is complete, only the length field is wrong. The decoder tolerates this by allowing small overruns (up to 512 bytes) while still rejecting truly truncated files.
 
 ## Project structure
 

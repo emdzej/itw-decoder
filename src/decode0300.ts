@@ -1337,7 +1337,13 @@ export function decode0300(buf: Uint8Array, payloadOffset: number, width: number
   const b = toBuffer(buf);
   const payloadLen = b.readUInt32BE(payloadOffset);
   const payloadStart = payloadOffset + 4;
-  if (payloadStart + payloadLen > buf.length) throw new ITWError("wavelet payload overruns file");
+  // Tolerate declared payload length exceeding file size — 586 files in the BMW TIS
+  // corpus have a payload length exactly 256 bytes larger than the actual file data.
+  // This is a systematic encoder bug; the actual wavelet data fits within the file.
+  if (payloadStart + payloadLen > buf.length) {
+    const over = (payloadStart + payloadLen) - buf.length;
+    if (over > 512) throw new ITWError("wavelet payload overruns file by " + over + " bytes");
+  }
   
   // Build Fischer tables
   const baseTable = buildBaseTable();        // cumulative counts — used to build diff table

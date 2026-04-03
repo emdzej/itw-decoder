@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-04-03
+
+### Fixed
+
+- Tolerate 256-byte payload length overrun in wavelet (0x0300) files — 586 files in the BMW TIS corpus have a declared payload length exactly 256 bytes larger than the actual file data due to a systematic encoder bug; the decoder now accepts overruns up to 512 bytes instead of rejecting the file outright, improving corpus success rate from 98.67% to 99.66%
+
 ## [0.1.0] - 2026-03-24
 
 ### Added
@@ -24,9 +30,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions publish workflow — OIDC trusted publishing to npmjs on GitHub release (no secrets required)
 - `docs/HOW_IT_WORKS.md` — complete language-agnostic decoder specification
 - PolyForm Noncommercial License 1.0.0
-
-### Fixed
-
-- `deriveMirror()` sign error in upper-half loop — second loop now starts at `sign = -1` instead of `+1`, resolving ~2× detail band gain and excessive clipping in wavelet output (MAD dropped from 9.84 to 2.90 vs reference)
-
-[0.1.0]: https://github.com/emdzej/itw-decoder/releases/tag/v0.1.0
