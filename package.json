@@ -1,6 +1,6 @@
 {
   "name": "@emdzej/itw-decoder",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "commonjs",
   "description": "Decode BMW TIS .ITW proprietary image files to PNG",
   "license": "PolyForm-Noncommercial-1.0.0",

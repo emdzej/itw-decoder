@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-04-03
+
+### Fixed
+
+- Fix Huffman tree construction using float64 arithmetic instead of float32 for internal node weight sums — the original C encoder uses IEEE 754 single-precision floats, and the rounding difference could reorder nodes in the priority queue, producing a wrong tree and completely garbled output for affected files (e.g. `GRAFIK/1/03/74/40.ITW`)
+
 ## [0.2.0] - 2026-04-03
 
 ### Fixed

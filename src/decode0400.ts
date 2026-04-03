@@ -164,6 +164,12 @@ function buildHuffTree(leaves: HuffNode[]): HuffNode[] {
   // Priority queue: indices to merge
   let queue = leaves.map(l => l.id);
 
+  // The original C code stores weights as IEEE 754 float (32-bit).
+  // We must use float32 arithmetic for the sum so that internal-node
+  // weights land on the same values the original encoder used;
+  // float64 rounding can reorder nodes and produce a wrong tree.
+  const f32 = new Float32Array(1);
+
   while (queue.length > 1) {
     // Sort by weight ascending (float comparison as in original FUN_004b60c0)
     queue.sort((a, b) => nodes[a].weight - nodes[b].weight);
@@ -173,6 +179,8 @@ function buildHuffTree(leaves: HuffNode[]): HuffNode[] {
     const left = nodes[leftId];
     const right = nodes[rightId];
 
+    f32[0] = left.weight + right.weight;
+
     const parentNode: HuffNode = {
       isLeaf: 0,
       symbol: 0,
@@ -180,7 +188,7 @@ function buildHuffTree(leaves: HuffNode[]): HuffNode[] {
       leftId: left.id,
       rightId: right.id,
       parentId: -1,
-      weight: left.weight + right.weight,
+      weight: f32[0],
     };
     left.parentId = parentNode.id;
     right.parentId = parentNode.id;
