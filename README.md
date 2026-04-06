@@ -109,6 +109,10 @@ pnpm build        # tsc → dist/
 pnpm dev          # run via ts-node (no build step)
 ```
 
+## Support
+
+If you find this project useful, consider [buying me a coffee](https://buymeacoffee.com/emdzej) ☕ or [sponsoring on GitHub](https://github.com/sponsors/emdzej).
+
 ## License
 
 [PolyForm Noncommercial License 1.0.0](LICENSE) — free for personal, research, and noncommercial use; commercial use is not permitted.
